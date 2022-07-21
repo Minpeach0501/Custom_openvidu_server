@@ -250,7 +250,7 @@ public class PublisherEndpoint extends MediaEndpoint {
 	}
 
 	/**
-	 * Same as {@link #apply(MediaElement)}, can specify the media type that will be
+	 * Same as {@link #apply(GenericMediaElement, MediaType)} , can specify the media type that will be
 	 * streamed through the shaper element.
 	 *
 	 * @param shaper {@link MediaElement} that will be linked to the end of the
@@ -473,15 +473,15 @@ public class PublisherEndpoint extends MediaEndpoint {
 	}
 
 	/**
-	 * Same as {@link #internalSinkConnect(MediaElement, MediaElement)}, but can
+	 * Same as , but can
 	 * specify the type of the media that will be streamed.
 	 *
 	 * @param source
 	 * @param sink
 	 * @param type   if null,
-	 *               {@link #internalSinkConnect(MediaElement, MediaElement)} will
+	 *               {@link #internalSinkConnect(MediaElement, MediaElement, MediaType, boolean)} will
 	 *               be used instead
-	 * @see #internalSinkConnect(MediaElement, MediaElement)
+	 * @see #internalSinkConnect(MediaElement, MediaElement, MediaType, boolean)
 	 */
 	private void internalSinkConnect(final MediaElement source, final MediaElement sink, final MediaType type,
 			boolean blocking) {
@@ -535,15 +535,14 @@ public class PublisherEndpoint extends MediaEndpoint {
 	}
 
 	/**
-	 * Same as {@link #internalSinkDisconnect(MediaElement, MediaElement)}, but can
+	 * Same as , but can
 	 * specify the type of the media that will be disconnected.
 	 *
 	 * @param source
 	 * @param sink
 	 * @param type   if null,
-	 *               {@link #internalSinkConnect(MediaElement, MediaElement)} will
+	 *                will
 	 *               be used instead
-	 * @see #internalSinkConnect(MediaElement, MediaElement)
 	 */
 	private void internalSinkDisconnect(final MediaElement source, final MediaElement sink, final MediaType type,
 			boolean blocking) {

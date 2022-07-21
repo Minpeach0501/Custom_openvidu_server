@@ -8,7 +8,7 @@ export COTURN_IP="${COTURN_IP:-auto-ipv4}"
 
 printf "\n"
 printf "\n  ======================================="
-printf "\n  =       LAUNCH OPENVIDU-SERVER        ="
+printf "\n  =   LAUNCH degether OPENVIDU-SERVER   ="
 printf "\n  ======================================="
 printf "\n"
 

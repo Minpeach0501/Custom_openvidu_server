@@ -398,7 +398,7 @@ public class KurentoParticipant extends Participant {
 	 * Returns a {@link SubscriberEndpoint} for the given participant public id. The
 	 * endpoint is created if not found.
 	 *
-	 * @param remotePublicId id of another user
+	 * param remotePublicId id of another user
 	 * @return the endpoint instance
 	 */
 	public SubscriberEndpoint getNewOrExistingSubscriber(String senderPublicId) {

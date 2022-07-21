@@ -119,7 +119,7 @@ public abstract class MediaEndpoint {
 	/**
 	 * Constructor to set the owner, the endpoint's name and the media pipeline.
 	 *
-	 * @param web
+	 *
 	 * @param owner
 	 * @param endpointName
 	 * @param pipeline
@@ -557,7 +557,7 @@ public abstract class MediaEndpoint {
 	 * the {@link Participant}.
 	 *
 	 * @see WebRtcEndpoint#addOnIceCandidateListener(org.kurento.client.EventListener)
-	 * @see Participant#sendIceCandidate(String, IceCandidate)
+	 * @see Participant
 	 * @throws OpenViduException if thrown, unable to register the listener
 	 */
 	protected void registerOnIceCandidateEventListener(String senderPublicId) throws OpenViduException {
