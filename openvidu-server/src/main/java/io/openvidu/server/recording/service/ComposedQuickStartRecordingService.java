@@ -39,9 +39,9 @@ public class ComposedQuickStartRecordingService extends ComposedRecordingService
 	public ComposedQuickStartRecordingService(RecordingManager recordingManager,
 			RecordingDownloader recordingDownloader, RecordingUploader recordingUploader, KmsManager kmsManager,
 			CustomFileManager fileManager, OpenviduConfig openviduConfig, CallDetailRecord cdr,
-			DockerManager dockerManager) {
+			DockerManager dockerManager, S3Uploader s3Uploader) {
 		super(recordingManager, recordingDownloader, recordingUploader, kmsManager, fileManager, openviduConfig, cdr,
-				dockerManager);
+				dockerManager, s3Uploader);
 	}
 
 	public void stopRecordingContainer(Session session, EndReason reason) {

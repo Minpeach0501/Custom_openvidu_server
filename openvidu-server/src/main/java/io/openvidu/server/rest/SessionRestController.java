@@ -28,20 +28,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.errorprone.annotations.RequiredModifiers;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.*;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -77,6 +76,9 @@ import io.openvidu.server.recording.Recording;
 import io.openvidu.server.recording.service.RecordingManager;
 import io.openvidu.server.utils.RecordingUtils;
 import io.openvidu.server.utils.RestUtils;
+import org.springframework.web.client.RestTemplate;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  *
@@ -100,79 +102,86 @@ public class SessionRestController {
 	protected OpenviduConfig openviduConfig;
 
 	@RequestMapping(value = "/sessions", method = RequestMethod.POST)
-	public ResponseEntity<?> initializeSession(@RequestBody(required = false) Map<?, ?> params) {
+	public ResponseEntity<?> initializeSession(@RequestBody(required = false) Map<?, ?> params,
+											   @RequestHeader(value = "token", required = false, defaultValue = "null") String token) throws JsonProcessingException {
+
 
 		log.info("REST API: POST {}/sessions {}", RequestMappings.API, params != null ? params.toString() : "{}");
 
-		SessionProperties sessionProperties;
-		try {
-			sessionProperties = getSessionPropertiesFromParams(params).build();
-		} catch (Exception e) {
-			return this.generateErrorResponse(e.getMessage(), "/sessions", HttpStatus.BAD_REQUEST);
-		}
+		//if(UserInfo(token, params.get("customSessionId").toString())) {
 
-		String sessionId;
-		Lock sessionLock = null;
+			SessionProperties sessionProperties;
+			try {
+				sessionProperties = getSessionPropertiesFromParams(params).build();
+			} catch (Exception e) {
+				return this.generateErrorResponse(e.getMessage(), "/sessions", HttpStatus.BAD_REQUEST);
+			}
 
-		try {
-			if (sessionProperties.customSessionId() != null && !sessionProperties.customSessionId().isEmpty()) {
-				// Session has custom session id
-				sessionId = sessionProperties.customSessionId();
-				Session session = sessionManager.getSessionWithNotActive(sessionProperties.customSessionId());
-				if (session != null) {
-					// The session appears to already exist
-					if (session.closingLock.readLock().tryLock()) {
-						// The session indeed exists and is not being closed
-						try {
-							log.warn("Session {} is already created", sessionProperties.customSessionId());
-							return new ResponseEntity<>(HttpStatus.CONFLICT);
-						} finally {
-							session.closingLock.readLock().unlock();
-						}
-					} else {
-						// The session exists but is being closed
-						log.warn("Session {} is in the process of closing while calling POST {}/sessions", sessionId,
-								RequestMappings.API);
-						try {
-							if (session.closingLock.writeLock().tryLock(15, TimeUnit.SECONDS)) {
-								if (sessionManager
-										.getSessionWithNotActive(sessionProperties.customSessionId()) != null) {
-									// Other thread took the lock before and rebuilt the closing session
-									session.closingLock.writeLock().unlock();
-									return new ResponseEntity<>(HttpStatus.CONFLICT);
-								} else {
-									// This thread will rebuild the closing session
-									sessionLock = session.closingLock.writeLock();
-								}
-							} else {
-								log.error("Timeout waiting for Session {} closing lock to be available", sessionId);
+			String sessionId;
+			Lock sessionLock = null;
+
+			try {
+				if (sessionProperties.customSessionId() != null && !sessionProperties.customSessionId().isEmpty()) {
+					// Session has custom session id
+					sessionId = sessionProperties.customSessionId();
+					Session session = sessionManager.getSessionWithNotActive(sessionProperties.customSessionId());
+					if (session != null) {
+						// The session appears to already exist
+						if (session.closingLock.readLock().tryLock()) {
+							// The session indeed exists and is not being closed
+							try {
+								log.warn("Session {} is already created", sessionProperties.customSessionId());
+								return new ResponseEntity<>(HttpStatus.CONFLICT);
+							} finally {
+								session.closingLock.readLock().unlock();
 							}
-						} catch (InterruptedException e) {
-							log.error("InterruptedException while waiting for Session {} closing lock to be available",
-									sessionId);
+						} else {
+							// The session exists but is being closed
+							log.warn("Session {} is in the process of closing while calling POST {}/sessions", sessionId,
+									RequestMappings.API);
+							try {
+								if (session.closingLock.writeLock().tryLock(15, TimeUnit.SECONDS)) {
+									if (sessionManager
+											.getSessionWithNotActive(sessionProperties.customSessionId()) != null) {
+										// Other thread took the lock before and rebuilt the closing session
+										session.closingLock.writeLock().unlock();
+										return new ResponseEntity<>(HttpStatus.CONFLICT);
+									} else {
+										// This thread will rebuild the closing session
+										sessionLock = session.closingLock.writeLock();
+									}
+								} else {
+									log.error("Timeout waiting for Session {} closing lock to be available", sessionId);
+								}
+							} catch (InterruptedException e) {
+								log.error("InterruptedException while waiting for Session {} closing lock to be available",
+										sessionId);
+							}
+
 						}
-
 					}
+				} else {
+					sessionId = IdentifierPrefixes.SESSION_ID + RandomStringUtils.randomAlphabetic(1).toUpperCase()
+							+ RandomStringUtils.randomAlphanumeric(9);
 				}
-			} else {
-				sessionId = IdentifierPrefixes.SESSION_ID + RandomStringUtils.randomAlphabetic(1).toUpperCase()
-						+ RandomStringUtils.randomAlphanumeric(9);
-			}
 
-			Session sessionNotActive = sessionManager.storeSessionNotActive(sessionId, sessionProperties);
-			if (sessionNotActive == null) {
-				return new ResponseEntity<>(HttpStatus.CONFLICT);
-			} else {
-				log.info("New session {} created {}", sessionId, this.sessionManager.getSessionsWithNotActive().stream()
-						.map(Session::getSessionId).collect(Collectors.toList()).toString());
-				return new ResponseEntity<>(sessionNotActive.toJson(false, false).toString(),
-						RestUtils.getResponseHeaders(), HttpStatus.OK);
+				Session sessionNotActive = sessionManager.storeSessionNotActive(sessionId, sessionProperties);
+				if (sessionNotActive == null) {
+					return new ResponseEntity<>(HttpStatus.CONFLICT);
+				} else {
+					log.info("New session {} created {}", sessionId, this.sessionManager.getSessionsWithNotActive().stream()
+							.map(Session::getSessionId).collect(Collectors.toList()).toString());
+					return new ResponseEntity<>(sessionNotActive.toJson(false, false).toString(),
+							RestUtils.getResponseHeaders(), HttpStatus.OK);
+				}
+			} finally {
+				if (sessionLock != null) {
+					sessionLock.unlock();
+				}
 			}
-		} finally {
-			if (sessionLock != null) {
-				sessionLock.unlock();
-			}
-		}
+//		}else {
+//			return new ResponseEntity<>("참여한 프로젝트가 아닙니다.",HttpStatus.NOT_ACCEPTABLE);
+//		}
 	}
 
 	@RequestMapping(value = "/sessions/{sessionId}", method = RequestMethod.GET)
@@ -1271,6 +1280,33 @@ public class SessionRestController {
 		responseJson.addProperty("path", RequestMappings.API + path);
 		log.warn("REST API error response to path {} ({}): {}", path, status.value(), errorMessage);
 		return new ResponseEntity<>(responseJson.toString(), RestUtils.getResponseHeaders(), status);
+	}
+
+	private boolean UserInfo(String token, String projectId) throws JsonProcessingException {
+// HTTP Header 생성
+		HttpHeaders headers = new HttpHeaders();
+		headers.add("token", token);
+
+// HTTP Body 생성
+		MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+
+// HTTP 요청 보내기
+		HttpEntity<MultiValueMap<String, String>> degetherTokenRequest =
+				new HttpEntity<>(body, headers);
+		RestTemplate rt = new RestTemplate();
+		ResponseEntity<String> response = rt.exchange(
+				"https://degether-back.shop/api/openvidu/"+projectId,
+				HttpMethod.GET,
+				degetherTokenRequest,
+				String.class
+		);
+
+// HTTP 응답 (JSON) -> 액세스 토큰 파싱
+		String responseBody = response.getBody();
+		ObjectMapper objectMapper = new ObjectMapper();
+		JsonNode jsonNode = objectMapper.readTree(responseBody);
+		System.out.println(jsonNode);
+		return jsonNode.get("ok").asBoolean();
 	}
 
 }

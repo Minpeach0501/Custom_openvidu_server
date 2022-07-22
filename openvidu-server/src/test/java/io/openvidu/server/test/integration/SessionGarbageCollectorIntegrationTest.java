@@ -20,6 +20,7 @@ package io.openvidu.server.test.integration;
 import java.util.HashMap;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.Assert;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -97,8 +98,8 @@ public class SessionGarbageCollectorIntegrationTest {
 		Assert.assertEquals("Wrong number of sessions", 1, jsonResponse.get("numberOfElements").getAsInt());
 	}
 
-	private Session getSession() {
-		String stringResponse = (String) sessionRestController.initializeSession(new HashMap<>()).getBody();
+	private Session getSession() throws JsonProcessingException {
+		String stringResponse = (String) sessionRestController.initializeSession(new HashMap<>(),"null").getBody();
 		JsonObject json = new Gson().fromJson(stringResponse, JsonObject.class);
 		String sessionId = json.get("id").getAsString();
 		return new Session(sessionId, null, null, null);

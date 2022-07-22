@@ -117,6 +117,9 @@ public class RecordingManager {
 	@Autowired
 	private CallDetailRecord cdr;
 
+	@Autowired
+	private S3Uploader s3Uploader;
+
 	protected Map<String, Recording> startingRecordings = new ConcurrentHashMap<>();
 	protected Map<String, Recording> startedRecordings = new ConcurrentHashMap<>();
 	protected Map<String, Recording> sessionsRecordings = new ConcurrentHashMap<>();
@@ -169,11 +172,11 @@ public class RecordingManager {
 		this.dockerManager.init();
 
 		this.composedRecordingService = new ComposedRecordingService(this, recordingDownloader, recordingUploader,
-				kmsManager, fileManager, openviduConfig, cdr, this.dockerManager);
+				kmsManager, fileManager, openviduConfig, cdr, this.dockerManager, s3Uploader);
 		this.composedQuickStartRecordingService = new ComposedQuickStartRecordingService(this, recordingDownloader,
-				recordingUploader, kmsManager, fileManager, openviduConfig, cdr, this.dockerManager);
+				recordingUploader, kmsManager, fileManager, openviduConfig, cdr, this.dockerManager, s3Uploader);
 		this.singleStreamRecordingService = new SingleStreamRecordingService(this, recordingDownloader,
-				recordingUploader, kmsManager, fileManager, openviduConfig, cdr);
+				recordingUploader, kmsManager, fileManager, openviduConfig, cdr, s3Uploader);
 
 		this.checkRecordingRequirements(this.openviduConfig.getOpenViduRecordingPath(),
 				this.openviduConfig.getOpenviduRecordingCustomLayout());

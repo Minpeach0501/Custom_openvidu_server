@@ -140,7 +140,7 @@ public class WebhookIntegrationTest {
 
 			final String sessionId = "WEBHOOK_TEST_SESSION";
 
-			this.sessionRestController.initializeSession(Map.of("customSessionId", sessionId));
+			this.sessionRestController.initializeSession(Map.of("customSessionId", sessionId), "null");
 
 			// Webhook event "sessionCreated" is delayed 500 ms
 			// Expected TimeoutException

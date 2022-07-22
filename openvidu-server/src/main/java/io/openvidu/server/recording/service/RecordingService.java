@@ -51,6 +51,7 @@ public abstract class RecordingService {
 	protected KmsManager kmsManager;
 	protected CustomFileManager fileManager;
 	protected CallDetailRecord cdr;
+	protected final S3Uploader s3Uploader;
 
 	public final static String RECORDING_ENTITY_FILE = ".recording.";
 	public final static String COMPOSED_RECORDING_EXTENSION = ".mp4";
@@ -62,7 +63,7 @@ public abstract class RecordingService {
 
 	public RecordingService(RecordingManager recordingManager, RecordingDownloader recordingDownloader,
 			RecordingUploader recordingUploader, KmsManager kmsManager, CustomFileManager fileManager,
-			OpenviduConfig openviduConfig, CallDetailRecord cdr) {
+			OpenviduConfig openviduConfig, CallDetailRecord cdr, S3Uploader s3Uploader) {
 		this.recordingManager = recordingManager;
 		this.recordingDownloader = recordingDownloader;
 		this.recordingUploader = recordingUploader;
@@ -70,6 +71,7 @@ public abstract class RecordingService {
 		this.fileManager = fileManager;
 		this.openviduConfig = openviduConfig;
 		this.cdr = cdr;
+		this.s3Uploader = s3Uploader;
 	}
 
 	public abstract Recording startRecording(Session session, String recordingId, RecordingProperties properties)

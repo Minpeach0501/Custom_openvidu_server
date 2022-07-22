@@ -82,8 +82,8 @@ public class SingleStreamRecordingService extends RecordingService {
 
 	public SingleStreamRecordingService(RecordingManager recordingManager, RecordingDownloader recordingDownloader,
 			RecordingUploader recordingUploader, KmsManager kmsManager, CustomFileManager fileManager,
-			OpenviduConfig openviduConfig, CallDetailRecord cdr) {
-		super(recordingManager, recordingDownloader, recordingUploader, kmsManager, fileManager, openviduConfig, cdr);
+			OpenviduConfig openviduConfig, CallDetailRecord cdr, S3Uploader s3Uploader) {
+		super(recordingManager, recordingDownloader, recordingUploader, kmsManager, fileManager, openviduConfig, cdr, s3Uploader);
 	}
 
 	@Override

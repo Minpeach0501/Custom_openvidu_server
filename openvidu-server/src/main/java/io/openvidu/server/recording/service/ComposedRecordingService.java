@@ -73,9 +73,10 @@ public class ComposedRecordingService extends RecordingService {
 
 	public ComposedRecordingService(RecordingManager recordingManager, RecordingDownloader recordingDownloader,
 			RecordingUploader recordingUploader, KmsManager kmsManager, CustomFileManager fileManager,
-			OpenviduConfig openviduConfig, CallDetailRecord cdr, DockerManager dockerManager) {
-		super(recordingManager, recordingDownloader, recordingUploader, kmsManager, fileManager, openviduConfig, cdr);
+			OpenviduConfig openviduConfig, CallDetailRecord cdr, DockerManager dockerManager, S3Uploader s3Uploader) {
+		super(recordingManager, recordingDownloader, recordingUploader, kmsManager, fileManager, openviduConfig, cdr, s3Uploader);
 		this.dockerManager = dockerManager;
+
 	}
 
 	@Override
@@ -346,6 +347,7 @@ public class ComposedRecordingService extends RecordingService {
 
 		final Recording[] finalRecordingArray = new Recording[1];
 		finalRecordingArray[0] = recording;
+		final String[] URL = {""};
 		try {
 			this.recordingDownloader.downloadRecording(finalRecordingArray[0], null, () -> {
 
@@ -355,9 +357,12 @@ public class ComposedRecordingService extends RecordingService {
 				long finalSize = videoFile.length();
 				double finalDuration = (double) compositeWrapper.getDuration() / 1000;
 				this.updateFilePermissions(filesPath);
-				finalRecordingArray[0] = this.sealRecordingMetadataFileAsReady(finalRecordingArray[0], finalSize,
+				finalRecordingArray[0] = this.sealRecordingMetadataFileAsReady(
+						finalRecordingArray[0],
+						finalSize,
 						finalDuration,
-						filesPath + RecordingService.RECORDING_ENTITY_FILE + finalRecordingArray[0].getId());
+						filesPath + RecordingService.RECORDING_ENTITY_FILE + finalRecordingArray[0].getId()
+				);
 
 				// Decrement active recordings once it is downloaded. This method will also drop
 				// the Media Node if no more sessions or recordings and status is
@@ -367,7 +372,7 @@ public class ComposedRecordingService extends RecordingService {
 
 				// Upload if necessary
 				this.uploadRecording(finalRecordingArray[0], reason);
-
+				URL[0] = s3Uploader.upload(videoFile, "recordings");
 			});
 		} catch (IOException e) {
 			log.error("Error while downloading recording {}: {}", finalRecordingArray[0].getName(), e.getMessage());
@@ -377,6 +382,9 @@ public class ComposedRecordingService extends RecordingService {
 			this.recordingManager.sessionHandler.sendRecordingStoppedNotification(session, finalRecordingArray[0],
 					reason);
 		}
+
+		log.info(URL[0]);
+		finalRecordingArray[0].setUrl(URL[0]);
 
 		return finalRecordingArray[0];
 	}
