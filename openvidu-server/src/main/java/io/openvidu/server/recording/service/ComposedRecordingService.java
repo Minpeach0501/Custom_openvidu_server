@@ -18,6 +18,7 @@
 package io.openvidu.server.recording.service;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -61,6 +62,7 @@ import io.openvidu.server.recording.RecordingUploader;
 import io.openvidu.server.rest.RequestMappings;
 import io.openvidu.server.utils.CustomFileManager;
 import io.openvidu.server.utils.DockerManager;
+import org.springframework.util.ResourceUtils;
 
 public class ComposedRecordingService extends RecordingService {
 
@@ -347,13 +349,13 @@ public class ComposedRecordingService extends RecordingService {
 
 		final Recording[] finalRecordingArray = new Recording[1];
 		finalRecordingArray[0] = recording;
-		final String[] URL = {""};
 		try {
 			this.recordingDownloader.downloadRecording(finalRecordingArray[0], null, () -> {
 
 				String filesPath = this.openviduConfig.getOpenViduRecordingPath() + finalRecordingArray[0].getId()
 						+ "/";
 				File videoFile = new File(filesPath + finalRecordingArray[0].getName() + ".webm");
+
 				long finalSize = videoFile.length();
 				double finalDuration = (double) compositeWrapper.getDuration() / 1000;
 				this.updateFilePermissions(filesPath);
@@ -372,7 +374,7 @@ public class ComposedRecordingService extends RecordingService {
 
 				// Upload if necessary
 				this.uploadRecording(finalRecordingArray[0], reason);
-				URL[0] = s3Uploader.upload(videoFile, "recordings");
+
 			});
 		} catch (IOException e) {
 			log.error("Error while downloading recording {}: {}", finalRecordingArray[0].getName(), e.getMessage());
@@ -382,10 +384,10 @@ public class ComposedRecordingService extends RecordingService {
 			this.recordingManager.sessionHandler.sendRecordingStoppedNotification(session, finalRecordingArray[0],
 					reason);
 		}
-
-		log.info(URL[0]);
-		finalRecordingArray[0].setUrl(URL[0]);
-
+		String filesPath = this.openviduConfig.getOpenViduRecordingPath() + finalRecordingArray[0].getId() + "/";
+		File videoFile = new File(filesPath + finalRecordingArray[0].getName() + ".webm");
+		String URL = s3Uploader.upload(videoFile, "recordings");
+		finalRecordingArray[0].setUrl(URL);
 		return finalRecordingArray[0];
 	}
 

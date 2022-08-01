@@ -108,7 +108,7 @@ public class SessionRestController {
 
 		log.info("REST API: POST {}/sessions {}", RequestMappings.API, params != null ? params.toString() : "{}");
 
-		//if(UserInfo(token, params.get("customSessionId").toString())) {
+		if(UserInfo(token, params.get("customSessionId").toString())) {
 
 			SessionProperties sessionProperties;
 			try {
@@ -179,9 +179,9 @@ public class SessionRestController {
 					sessionLock.unlock();
 				}
 			}
-//		}else {
-//			return new ResponseEntity<>("참여한 프로젝트가 아닙니다.",HttpStatus.NOT_ACCEPTABLE);
-//		}
+		}else {
+			return new ResponseEntity<>("참여한 프로젝트가 아닙니다.",HttpStatus.NOT_ACCEPTABLE);
+		}
 	}
 
 	@RequestMapping(value = "/sessions/{sessionId}", method = RequestMethod.GET)
@@ -285,31 +285,39 @@ public class SessionRestController {
 
 	@RequestMapping(value = "/sessions/{sessionId}/connection", method = RequestMethod.POST)
 	public ResponseEntity<?> initializeConnection(@PathVariable("sessionId") String sessionId,
-			@RequestBody Map<?, ?> params) {
+												  @RequestBody Map<?, ?> params,
+												  @RequestHeader(value = "token", required = false, defaultValue = "null") String token) throws JsonProcessingException {
+	//gettoken 요청 api
 
-		log.info("REST API: POST {} {}", RequestMappings.API + "/sessions/" + sessionId + "/connection",
-				params.toString());
+		if(UserInfo(token, sessionId)) {
 
-		Session session = this.sessionManager.getSessionWithNotActive(sessionId);
-		if (session == null) {
-			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-		}
 
-		ConnectionProperties connectionProperties;
-		try {
-			connectionProperties = getConnectionPropertiesFromParams(params).build();
-		} catch (Exception e) {
-			return this.generateErrorResponse(e.getMessage(), "/sessions/" + sessionId + "/connection",
-					HttpStatus.BAD_REQUEST);
-		}
-		switch (connectionProperties.getType()) {
-		case WEBRTC:
-			return this.newWebrtcConnection(session, connectionProperties);
-		case IPCAM:
-			return this.newIpcamConnection(session, connectionProperties);
-		default:
-			return this.generateErrorResponse("Wrong type parameter", "/sessions/" + sessionId + "/connection",
-					HttpStatus.BAD_REQUEST);
+			log.info("REST API: POST {} {}", RequestMappings.API + "/sessions/" + sessionId + "/connection",
+					params.toString());
+
+			Session session = this.sessionManager.getSessionWithNotActive(sessionId);
+			if (session == null) {
+				return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+			}
+
+			ConnectionProperties connectionProperties;
+			try {
+				connectionProperties = getConnectionPropertiesFromParams(params).build();
+			} catch (Exception e) {
+				return this.generateErrorResponse(e.getMessage(), "/sessions/" + sessionId + "/connection",
+						HttpStatus.BAD_REQUEST);
+			}
+			switch (connectionProperties.getType()) {
+				case WEBRTC:
+					return this.newWebrtcConnection(session, connectionProperties);
+				case IPCAM:
+					return this.newIpcamConnection(session, connectionProperties);
+				default:
+					return this.generateErrorResponse("Wrong type parameter", "/sessions/" + sessionId + "/connection",
+							HttpStatus.BAD_REQUEST);
+			}
+		}else{
+			return new ResponseEntity<>("참여한 프로젝트가 아닙니다.",HttpStatus.NOT_ACCEPTABLE);
 		}
 	}
 
@@ -502,6 +510,12 @@ public class SessionRestController {
 			sessionManager.evictParticipant(
 					session.getParticipantByPublicId(ProtocolElements.RECORDER_PARTICIPANT_PUBLICID), null, null, null);
 		}
+		if (!this.openviduConfig.isRecordingModuleEnabled()) {
+			// OpenVidu Server configuration property "OPENVIDU_RECORDING" is set to false
+			return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+		}
+
+		this.recordingManager.deleteRecordingFromHost(recordingId, false);
 
 		return new ResponseEntity<>(stoppedRecording.toJson(false).toString(), RestUtils.getResponseHeaders(),
 				HttpStatus.OK);
@@ -1285,7 +1299,7 @@ public class SessionRestController {
 	private boolean UserInfo(String token, String projectId) throws JsonProcessingException {
 // HTTP Header 생성
 		HttpHeaders headers = new HttpHeaders();
-		headers.add("token", token);
+		headers.add("Authorization", token);
 
 // HTTP Body 생성
 		MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
@@ -1295,7 +1309,7 @@ public class SessionRestController {
 				new HttpEntity<>(body, headers);
 		RestTemplate rt = new RestTemplate();
 		ResponseEntity<String> response = rt.exchange(
-				"https://degether-back.shop/api/openvidu/"+projectId,
+				"https://degether-server.shop/api/openvidu/"+projectId,
 				HttpMethod.GET,
 				degetherTokenRequest,
 				String.class

@@ -25,7 +25,6 @@ public class S3Uploader {
     public String upload(File file, String dirName) {
         // 1. S3에 업로드할 파일 이름 생성
         String fileName = createFileName(file.getName(), dirName);
-        System.out.println(fileName);
         // 2. File S3에 업로드
         s3Upload(fileName, file);
         // 3. S3에 업로드된 이미지 URL 가져오기
@@ -54,18 +53,12 @@ public class S3Uploader {
 
     // S3에 이미지 업로드
     private void s3Upload(String fileName, File file) {
-        System.out.println(file);
-        System.out.println("upload start");
-        System.out.println(bucket);
-        System.out.println(baseUrl);
-
         // 파일 객체 생성 후 S3에 버킷 업로드
+        //new PutObjectRequest(bucket, fileName, file).withCannedAcl(CannedAccessControlList.PublicRead);
         amazonS3Client.putObject(
                 new PutObjectRequest(bucket, fileName, file)
-                        .withCannedAcl(CannedAccessControlList.PublicRead)
-        );
-        System.out.println("upload end");
-   }
+                        .withCannedAcl(CannedAccessControlList.PublicRead));
+    }
 
     // 업로드된 S3 파일 삭제
     public void deleteFromS3(String source) {

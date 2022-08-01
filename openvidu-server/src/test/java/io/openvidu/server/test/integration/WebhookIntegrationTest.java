@@ -150,7 +150,7 @@ public class WebhookIntegrationTest {
 			// Now webhook response for event "sessionCreated" should be received
 			CustomWebhook.waitForEvent("sessionCreated", 1000, TimeUnit.MILLISECONDS);
 
-			this.sessionRestController.initializeConnection(sessionId, Map.of());
+			this.sessionRestController.initializeConnection(sessionId, Map.of(), "null");
 
 			Session session = kurentoSessionManager.getSessionWithNotActive(sessionId);
 			Token token = new Token("token", sessionId, new ConnectionProperties.Builder().build(), null);

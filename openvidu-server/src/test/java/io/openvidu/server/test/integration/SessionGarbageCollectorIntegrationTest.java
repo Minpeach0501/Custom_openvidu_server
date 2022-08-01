@@ -105,9 +105,9 @@ public class SessionGarbageCollectorIntegrationTest {
 		return new Session(sessionId, null, null, null);
 	}
 
-	private String getToken(Session session) {
+	private String getToken(Session session) throws JsonProcessingException {
 		String stringResponse = (String) sessionRestController
-				.initializeConnection(session.getSessionId(), new HashMap<>()).getBody();
+				.initializeConnection(session.getSessionId(), new HashMap<>(), "null").getBody();
 		return new Gson().fromJson(stringResponse, JsonObject.class).get("token").getAsString();
 	}
 
